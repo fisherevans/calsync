@@ -1,59 +1,110 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 430" font-family="system-ui, -apple-system, Segoe UI, Roboto, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 570" font-family="system-ui, -apple-system, Segoe UI, Roboto, sans-serif">
   <defs>
     <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
       <path d="M0,0 L10,5 L0,10 z" fill="#57606a"/>
     </marker>
   </defs>
 
-  <!-- panel -->
-  <rect x="10" y="10" width="880" height="410" rx="14" fill="#f6f8fa" stroke="#d0d7de" stroke-width="1.5"/>
+  <rect x="10" y="10" width="940" height="550" rx="14" fill="#f6f8fa" stroke="#d0d7de" stroke-width="1.5"/>
 
-  <!-- ===================== MASK ROW ===================== -->
-  <text x="50" y="52" font-size="17" font-weight="700" fill="#bf8700">MASK<tspan font-size="13" font-weight="400" fill="#57606a">  copy events as opaque, padded busy blocks</tspan></text>
+  <!-- ============================ MASK ============================ -->
+  <text x="40" y="50" font-size="17" font-weight="700" fill="#bf8700">MASK<tspan font-size="13" font-weight="400" fill="#57606a">  copy events as opaque, padded busy blocks</tspan></text>
 
-  <!-- source -->
-  <text x="68" y="84" font-size="12" font-weight="600" fill="#57606a" letter-spacing="0.5">PERSONAL CALENDAR</text>
-  <rect x="50" y="94" width="240" height="74" rx="8" fill="#ffffff" stroke="#d0d7de"/>
-  <rect x="50" y="94" width="5" height="74" rx="2.5" fill="#d29922"/>
-  <text x="70" y="126" font-size="15" font-weight="600" fill="#24292f">Dentist appointment</text>
-  <text x="70" y="148" font-size="12" fill="#57606a">Tue  2:00 - 3:00 PM</text>
+  <text x="200" y="80" font-size="11" font-weight="600" fill="#57606a" text-anchor="middle" letter-spacing="0.5">PERSONAL CALENDAR</text>
+  <text x="760" y="80" font-size="11" font-weight="600" fill="#57606a" text-anchor="middle" letter-spacing="0.5">WORK CALENDAR</text>
 
-  <!-- arrow -->
-  <line x1="298" y1="131" x2="562" y2="131" stroke="#57606a" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <rect x="396" y="119" width="68" height="24" rx="12" fill="#bf8700"/>
-  <text x="430" y="135" font-size="12" font-weight="600" fill="#ffffff" text-anchor="middle">mask</text>
-  <text x="430" y="160" font-size="11" fill="#57606a" text-anchor="middle">+20 min buffer, details dropped</text>
+  <!-- left agenda grid: 1-4 PM -->
+  <line x1="78" y1="90"  x2="322" y2="90"  stroke="#dde2e8"/>
+  <line x1="78" y1="150" x2="322" y2="150" stroke="#dde2e8"/>
+  <line x1="78" y1="210" x2="322" y2="210" stroke="#dde2e8"/>
+  <line x1="78" y1="270" x2="322" y2="270" stroke="#dde2e8"/>
+  <text x="70" y="94"  font-size="11" fill="#8b949e" text-anchor="end">1 PM</text>
+  <text x="70" y="154" font-size="11" fill="#8b949e" text-anchor="end">2 PM</text>
+  <text x="70" y="214" font-size="11" fill="#8b949e" text-anchor="end">3 PM</text>
+  <text x="70" y="274" font-size="11" fill="#8b949e" text-anchor="end">4 PM</text>
 
-  <!-- target -->
-  <text x="588" y="84" font-size="12" font-weight="600" fill="#57606a" letter-spacing="0.5">WORK CALENDAR</text>
-  <rect x="570" y="94" width="260" height="74" rx="8" fill="#ffffff" stroke="#d0d7de"/>
-  <rect x="570" y="94" width="5" height="74" rx="2.5" fill="#8b949e"/>
-  <text x="590" y="126" font-size="15" font-weight="600" fill="#24292f">Busy</text>
-  <text x="590" y="148" font-size="12" fill="#57606a">Tue  1:40 - 3:20 PM</text>
+  <!-- source event: Haircut 2:00-3:00 (1 hr) -->
+  <rect x="88" y="150" width="234" height="60" rx="6" fill="#fbf0d9" stroke="#e3c270"/>
+  <rect x="88" y="150" width="5" height="60" rx="2.5" fill="#d29922"/>
+  <text x="104" y="176" font-size="14" font-weight="600" fill="#24292f">Haircut</text>
+  <text x="104" y="195" font-size="11" fill="#7a6320">2:00 - 3:00 PM &#183; 1 hr</text>
+
+  <!-- right agenda grid: 1-4 PM -->
+  <line x1="638" y1="90"  x2="882" y2="90"  stroke="#dde2e8"/>
+  <line x1="638" y1="150" x2="882" y2="150" stroke="#dde2e8"/>
+  <line x1="638" y1="210" x2="882" y2="210" stroke="#dde2e8"/>
+  <line x1="638" y1="270" x2="882" y2="270" stroke="#dde2e8"/>
+  <text x="630" y="94"  font-size="11" fill="#8b949e" text-anchor="end">1 PM</text>
+  <text x="630" y="154" font-size="11" fill="#8b949e" text-anchor="end">2 PM</text>
+  <text x="630" y="214" font-size="11" fill="#8b949e" text-anchor="end">3 PM</text>
+  <text x="630" y="274" font-size="11" fill="#8b949e" text-anchor="end">4 PM</text>
+
+  <!-- masked event: Busy 1:40-3:20, padded +20m each side -> taller block -->
+  <rect x="648" y="130" width="234" height="100" rx="6" fill="#e9edf1" stroke="#aab1b8"/>
+  <rect x="648" y="130" width="5" height="100" rx="2.5" fill="#8b949e"/>
+  <line x1="653" y1="150" x2="882" y2="150" stroke="#aab1b8" stroke-dasharray="3 3"/>
+  <line x1="653" y1="210" x2="882" y2="210" stroke="#aab1b8" stroke-dasharray="3 3"/>
+  <text x="874" y="144" font-size="9.5" fill="#8b949e" text-anchor="end">+20 min buffer</text>
+  <text x="874" y="226" font-size="9.5" fill="#8b949e" text-anchor="end">+20 min buffer</text>
+  <text x="664" y="184" font-size="14" font-weight="600" fill="#57606a">Busy</text>
+  <text x="664" y="203" font-size="11" fill="#8b949e">1:40 - 3:20 PM</text>
+
+  <!-- mask arrow -->
+  <line x1="332" y1="180" x2="636" y2="180" stroke="#57606a" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <rect x="450" y="168" width="68" height="24" rx="12" fill="#bf8700"/>
+  <text x="484" y="184" font-size="12" font-weight="600" fill="#ffffff" text-anchor="middle">mask</text>
+  <text x="484" y="208" font-size="11" fill="#57606a" text-anchor="middle">padded by buffer, details dropped</text>
 
   <!-- divider -->
-  <line x1="50" y1="214" x2="830" y2="214" stroke="#d0d7de" stroke-width="1" stroke-dasharray="4 4"/>
+  <line x1="40" y1="305" x2="920" y2="305" stroke="#d0d7de" stroke-dasharray="4 4"/>
 
-  <!-- ===================== MIRROR ROW ===================== -->
-  <text x="50" y="262" font-size="17" font-weight="700" fill="#1f6feb">MIRROR<tspan font-size="13" font-weight="400" fill="#57606a">  copy titles (and join links) across</tspan></text>
+  <!-- ============================ MIRROR ============================ -->
+  <text x="40" y="345" font-size="17" font-weight="700" fill="#1f6feb">MIRROR<tspan font-size="13" font-weight="400" fill="#57606a">  copy title + join link, leave the rest behind</tspan></text>
 
-  <!-- source -->
-  <text x="68" y="294" font-size="12" font-weight="600" fill="#57606a" letter-spacing="0.5">WORK CALENDAR</text>
-  <rect x="50" y="304" width="240" height="74" rx="8" fill="#ffffff" stroke="#d0d7de"/>
-  <rect x="50" y="304" width="5" height="74" rx="2.5" fill="#1f6feb"/>
-  <text x="70" y="336" font-size="15" font-weight="600" fill="#24292f">Team Standup</text>
-  <text x="70" y="358" font-size="12" fill="#57606a">Mon  10:00 - 10:15 AM  &#183; zoom</text>
+  <text x="200" y="375" font-size="11" font-weight="600" fill="#57606a" text-anchor="middle" letter-spacing="0.5">WORK CALENDAR</text>
+  <text x="760" y="375" font-size="11" font-weight="600" fill="#57606a" text-anchor="middle" letter-spacing="0.5">PERSONAL CALENDAR</text>
 
-  <!-- arrow -->
-  <line x1="298" y1="341" x2="562" y2="341" stroke="#57606a" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <rect x="392" y="329" width="76" height="24" rx="12" fill="#1f6feb"/>
-  <text x="430" y="345" font-size="12" font-weight="600" fill="#ffffff" text-anchor="middle">mirror</text>
-  <text x="430" y="370" font-size="11" fill="#57606a" text-anchor="middle">title + join link copied</text>
+  <!-- left agenda grid: 9 AM - 12 PM -->
+  <line x1="78" y1="390" x2="322" y2="390" stroke="#dde2e8"/>
+  <line x1="78" y1="440" x2="322" y2="440" stroke="#dde2e8"/>
+  <line x1="78" y1="490" x2="322" y2="490" stroke="#dde2e8"/>
+  <line x1="78" y1="540" x2="322" y2="540" stroke="#dde2e8"/>
+  <text x="70" y="394" font-size="11" fill="#8b949e" text-anchor="end">9 AM</text>
+  <text x="70" y="444" font-size="11" fill="#8b949e" text-anchor="end">10 AM</text>
+  <text x="70" y="494" font-size="11" fill="#8b949e" text-anchor="end">11 AM</text>
+  <text x="70" y="544" font-size="11" fill="#8b949e" text-anchor="end">12 PM</text>
 
-  <!-- target -->
-  <text x="588" y="294" font-size="12" font-weight="600" fill="#57606a" letter-spacing="0.5">PERSONAL CALENDAR</text>
-  <rect x="570" y="304" width="260" height="74" rx="8" fill="#ffffff" stroke="#d0d7de"/>
-  <rect x="570" y="304" width="5" height="74" rx="2.5" fill="#1f6feb"/>
-  <text x="590" y="336" font-size="15" font-weight="600" fill="#24292f">Team Standup</text>
-  <text x="590" y="358" font-size="12" fill="#57606a">Mon  10:00 - 10:15 AM  &#183; join</text>
+  <!-- source event: rich work meeting 10:00-11:30 -->
+  <rect x="88" y="440" width="234" height="90" rx="6" fill="#e7effb" stroke="#aac4ee"/>
+  <rect x="88" y="440" width="5" height="90" rx="2.5" fill="#1f6feb"/>
+  <text x="104" y="461" font-size="13" font-weight="600" fill="#24292f">Project Review</text>
+  <circle cx="110" cy="478" r="8" fill="#c2cee2" stroke="#e7effb" stroke-width="1.5"/>
+  <circle cx="123" cy="478" r="8" fill="#a9bbd9" stroke="#e7effb" stroke-width="1.5"/>
+  <circle cx="136" cy="478" r="8" fill="#8fa6cf" stroke="#e7effb" stroke-width="1.5"/>
+  <text x="152" y="482" font-size="11" fill="#57606a">5 guests</text>
+  <text x="104" y="502" font-size="11" fill="#1f6feb" text-decoration="underline">Q3-strategy.pdf, agenda.gdoc</text>
+  <text x="104" y="520" font-size="11" fill="#1f6feb" text-decoration="underline">zoom.us/j/88213</text>
+
+  <!-- right agenda grid -->
+  <line x1="638" y1="390" x2="882" y2="390" stroke="#dde2e8"/>
+  <line x1="638" y1="440" x2="882" y2="440" stroke="#dde2e8"/>
+  <line x1="638" y1="490" x2="882" y2="490" stroke="#dde2e8"/>
+  <line x1="638" y1="540" x2="882" y2="540" stroke="#dde2e8"/>
+  <text x="630" y="394" font-size="11" fill="#8b949e" text-anchor="end">9 AM</text>
+  <text x="630" y="444" font-size="11" fill="#8b949e" text-anchor="end">10 AM</text>
+  <text x="630" y="494" font-size="11" fill="#8b949e" text-anchor="end">11 AM</text>
+  <text x="630" y="544" font-size="11" fill="#8b949e" text-anchor="end">12 PM</text>
+
+  <!-- mirrored event: same time, title + link only -->
+  <rect x="648" y="440" width="234" height="90" rx="6" fill="#e7effb" stroke="#aac4ee"/>
+  <rect x="648" y="440" width="5" height="90" rx="2.5" fill="#1f6feb"/>
+  <text x="664" y="461" font-size="13" font-weight="600" fill="#24292f">Project Review</text>
+  <text x="664" y="481" font-size="11" fill="#1f6feb" text-decoration="underline">zoom.us/j/88213</text>
+  <text x="664" y="510" font-size="10.5" font-style="italic" fill="#9aa3ad">guests, docs &amp; notes left behind</text>
+
+  <!-- mirror arrow -->
+  <line x1="332" y1="485" x2="636" y2="485" stroke="#57606a" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <rect x="448" y="473" width="72" height="24" rx="12" fill="#1f6feb"/>
+  <text x="484" y="489" font-size="12" font-weight="600" fill="#ffffff" text-anchor="middle">mirror</text>
+  <text x="484" y="513" font-size="11" fill="#57606a" text-anchor="middle">title + join link only</text>
 </svg>
