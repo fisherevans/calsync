@@ -1,0 +1,4 @@
+# Everything not under src/ is repo tooling, not script source.
+**/**
+!appsscript.json
+!*.js

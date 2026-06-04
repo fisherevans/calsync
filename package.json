@@ -1,0 +1,29 @@
+{
+  "name": "calsync",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Unified Google Calendar sync (mask + mirror) for Apps Script, deployed via clasp.",
+  "scripts": {
+    "login": "clasp login",
+    "push": "clasp push",
+    "pull": "clasp pull",
+    "open": "clasp open-script",
+    "logs": "clasp tail-logs",
+    "setup-triggers": "clasp run setupTriggers",
+    "rebuild-triggers": "clasp run rebuildTriggers",
+    "upgrade": "clasp run upgradeManagedEvents",
+    "dry-run": "clasp run dryRunAll",
+    "typecheck": "tsc -p jsconfig.json"
+  },
+  "devDependencies": {
+    "@google/clasp": "^3.0.0",
+    "@types/google-apps-script": "^1.0.0",
+    "typescript": "^5.4.0"
+  },
+  "comments": {
+    "overrides.uuid": "Force clasp's transitive uuid off 9.0.1 (CVE-2026-41907, missing v3/v5/v6 buffer bounds check). 11.1.1 is the patched release that still ships CommonJS; 14.x is ESM-first."
+  },
+  "overrides": {
+    "uuid": "^11.1.1"
+  }
+}

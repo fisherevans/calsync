@@ -1,0 +1,16 @@
+# Dependencies
+node_modules/
+
+# clasp auth (global token) and per-user project binding — never commit these.
+# Each person who adopts this runs `clasp create`, which writes their own
+# .clasp.json pointing at their own Apps Script project.
+.clasprc.json
+.clasp.json
+
+# Your real sync config — holds personal calendar ids. Create it from the
+# template: `cp Config.example.js src/Config.js`
+src/Config.js
+
+# The original pre-unification scripts, kept locally for reference. They
+# contain real calendar ids / addresses, so they're not committed.
+og/
