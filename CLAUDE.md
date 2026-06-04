@@ -5,8 +5,8 @@ One Google Apps Script that reconciles a source calendar into a target, two ways
 join link). Both directions are the same operation, so they share one engine and
 differ only by per-rule config. Deployed to Apps Script via `clasp`.
 
-User-facing setup, deploy, and operations docs live in `README.md`. This file is
-for working on the code.
+User-facing quick start lives in `README.md`; deeper how-it-works and operations
+docs in `docs/DEVELOPMENT.md`. This file is for working on the code.
 
 ## Architecture
 
