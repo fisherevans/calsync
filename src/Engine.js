@@ -75,16 +75,41 @@ function syncRule_(rule, dryRun) {
   // 2. index existing managed events on the target by their tag value
   const target = resolveCalendar_(rule.target);
   if (!target) throw new Error(`target calendar not found / no write access: ${rule.target}`);
-  const managed = new Map(); // tagValue -> target CalendarEvent
+  // A tag value identifies exactly one source instance, so more than one
+  // target event carrying it is a duplicate. Bucket first rather than
+  // assigning into a Map: a Map keyed by tag value keeps only the last event
+  // and silently drops the rest, which removes them from both the update path
+  // and the orphan sweep below. That is what let duplicates persist forever
+  // instead of converging.
+  const byKey = new Map(); // tagValue -> target CalendarEvent[]
   for (const ev of target.getEvents(windowStart, windowEnd)) {
     const v = safeGetTag_(ev, tagKey);
-    if (v) managed.set(v, ev);
+    if (!v) continue;
+    if (!byKey.has(v)) byKey.set(v, []);
+    byKey.get(v).push(ev);
   }
-  log_(rule.name, 'INFO', `found ${sourceItems.length} source events, ${managed.size} existing managed`);
+
+  const stats = emptyStats_();
+  const managed = new Map(); // tagValue -> the one target CalendarEvent we keep
+  byKey.forEach((events, v) => {
+    managed.set(v, events[0]);
+    for (let i = 1; i < events.length; i++) {
+      try {
+        deleteEvent_(events[i], dryRun);
+        stats.deleted++;
+        log_(rule.name, 'CHANGE', `delete duplicate (same key ${v})`);
+      } catch (e) {
+        stats.errors++;
+        log_(rule.name, 'ERROR', `duplicate delete failed: ${(e && e.stack) || e}`);
+      }
+    }
+  });
+  log_(rule.name, 'INFO',
+    `found ${sourceItems.length} source events, ${managed.size} existing managed, ` +
+    `${stats.deleted} same-key duplicates removed`);
 
   // 3. reconcile
   const seen = new Set();
-  const stats = emptyStats_();
 
   for (const item of sourceItems) {
     try {
@@ -185,19 +210,31 @@ function evaluate_(rule, event) {
 
 /* ---------------------------- mutations ----------------------------- */
 
+/**
+ * Create one managed event on the target.
+ *
+ * createEvent is not idempotent, so it must never share a withRetry_ block
+ * with the setters that follow it. Retrying the whole sequence after a
+ * transient failure in a later setter re-runs createEvent and leaves the
+ * first, half-configured event behind. That stray has no calsync tag, so
+ * reconcile cannot index it (step 2), cannot orphan-delete it (step 4), and
+ * cannot recognise it as ours, which makes the duplicate permanent.
+ *
+ * Each call therefore gets its own retry, and the tag is written first: an
+ * event that is tagged but otherwise unshaped is repaired by diffEvent_ on
+ * the next run, while an untagged one is lost.
+ */
 function createManaged_(target, tagKey, tagValue, d, dryRun) {
   if (dryRun) return null;
-  return withRetry_(() => {
-    const ev = target.createEvent(d.title, d.start, d.end);
-    ev.setTag(tagKey, tagValue);
-    ev.setTag(SCHEMA_TAG, SCHEMA_VERSION); // self-identifying for future upgrades
-    if (d.location) ev.setLocation(d.location);
-    if (d.description) ev.setDescription(d.description);
-    if (d.color) ev.setColor(d.color);
-    if (d.visibility) ev.setVisibility(d.visibility);
-    if (d.removeReminders) ev.removeAllReminders();
-    return ev;
-  });
+  const ev = withRetry_(() => target.createEvent(d.title, d.start, d.end));
+  withRetry_(() => ev.setTag(tagKey, tagValue));
+  withRetry_(() => ev.setTag(SCHEMA_TAG, SCHEMA_VERSION)); // for future upgrades
+  if (d.location) withRetry_(() => ev.setLocation(d.location));
+  if (d.description) withRetry_(() => ev.setDescription(d.description));
+  if (d.color) withRetry_(() => ev.setColor(d.color));
+  if (d.visibility) withRetry_(() => ev.setVisibility(d.visibility));
+  if (d.removeReminders) withRetry_(() => ev.removeAllReminders());
+  return ev;
 }
 
 function applyDesired_(ev, d, dryRun) {
@@ -336,4 +373,186 @@ function upgradeManagedEvents() {
     }
   }
   log_('*', 'INFO', `upgrade scan complete: scanned=${scanned} upgraded=${upgraded}`);
+}
+
+/* --------------------------- stray cleanup -------------------------- */
+
+/**
+ * Remove untagged duplicates left behind by the pre-fix createManaged_.
+ *
+ * A stray is an event on a target calendar that exactly matches a properly
+ * tagged managed event (same title, same start, same end) but carries no
+ * calsync tag of its own. Reconcile cannot see these, so they persist through
+ * every run; this is the only thing that removes them.
+ *
+ * The match is deliberately exact and requires a tagged sibling. A group with
+ * no tagged event is left alone, because without one there is no evidence the
+ * duplicate came from here rather than from you.
+ *
+ * Run dryRunCleanupStrays() first and read the report. The editor's Run button
+ * passes no arguments, which is why these are two functions rather than one
+ * with a flag.
+ */
+function dryRunCleanupStrays() { return cleanupStrays_(true); }
+
+/** Delete the strays that dryRunCleanupStrays() reports. */
+function cleanupStrays() { return cleanupStrays_(false); }
+
+function cleanupStrays_(dryRun) {
+  const startedAt = new Date();
+  const findings = [];
+  let deleted = 0;
+  let errors = 0;
+
+  for (const raw of getSyncRules()) {
+    const rule = normalizeRule_(raw);
+    const tagKey = TAG_PREFIX + rule.name;
+    const target = resolveCalendar_(rule.target);
+    if (!target) {
+      log_(rule.name, 'WARN', `target calendar not found: ${rule.target}`);
+      continue;
+    }
+
+    // Duplicates can sit before the sync window, which is forward-only from
+    // now, so reconcile will never revisit them however it is fixed. Look
+    // back as well as ahead.
+    const start = new Date();
+    start.setDate(start.getDate() - 90);
+    const end = new Date();
+    end.setDate(end.getDate() + rule.windowDays + 30);
+
+    const byKey = new Map();   // tag value -> events carrying it
+    const byShape = new Map(); // title|start|end -> { tagged, untagged }
+    for (const ev of target.getEvents(start, end)) {
+      const shape = [tryTitle_(ev), ev.getStartTime().toISOString(), ev.getEndTime().toISOString()].join('|');
+      if (!byShape.has(shape)) byShape.set(shape, { tagged: [], untagged: [] });
+      const tagValue = safeGetTag_(ev, tagKey);
+      if (tagValue) {
+        if (!byKey.has(tagValue)) byKey.set(tagValue, []);
+        byKey.get(tagValue).push(ev);
+        byShape.get(shape).tagged.push(ev);
+      } else if (!isManagedBySelf_(ev)) {
+        byShape.get(shape).untagged.push(ev);
+      }
+    }
+
+    const remove = (ev, kind, label) => {
+      try {
+        deleteEvent_(ev, dryRun);
+        deleted++;
+      } catch (e) {
+        errors++;
+        log_(rule.name, 'ERROR', `${kind} delete failed on ${label}: ${(e && e.stack) || e}`);
+      }
+    };
+
+    // 1. Same tag value means the same source instance, so every copy beyond
+    //    the first is a duplicate by definition. This is the exact case.
+    byKey.forEach((events, tagValue) => {
+      if (events.length < 2) return;
+      const finding = {
+        kind: 'same-key', rule: rule.name, target: rule.target,
+        title: tryTitle_(events[0]), start: events[0].getStartTime().toISOString(),
+        removing: events.length - 1, keeping: 1,
+      };
+      findings.push(finding);
+      log_(rule.name, dryRun ? 'INFO' : 'CHANGE', `${dryRun ? '[DRY RUN] ' : ''}GROUP ${JSON.stringify(finding)}`);
+      for (let i = 1; i < events.length; i++) remove(events[i], 'duplicate', tagValue);
+    });
+
+    // 2. Untagged copies of a shape that also has a tagged event. Inexact, so
+    //    it requires a tagged sibling as evidence the copy came from here.
+    byShape.forEach((group, shape) => {
+      if (!group.tagged.length || !group.untagged.length) return;
+      const finding = {
+        kind: 'untagged', rule: rule.name, target: rule.target,
+        title: tryTitle_(group.untagged[0]), start: group.untagged[0].getStartTime().toISOString(),
+        removing: group.untagged.length, keeping: group.tagged.length,
+      };
+      findings.push(finding);
+      log_(rule.name, dryRun ? 'INFO' : 'CHANGE', `${dryRun ? '[DRY RUN] ' : ''}GROUP ${JSON.stringify(finding)}`);
+      for (const ev of group.untagged) remove(ev, 'stray', shape);
+    });
+  }
+
+  const summary = {
+    rule: '*', kind: 'SUMMARY', dryRun: !!dryRun,
+    elapsedMs: new Date().getTime() - startedAt.getTime(),
+    wouldDelete: deleted, errors: errors, groups: findings.length,
+  };
+  console.log(JSON.stringify(summary));
+  return { summary: summary, findings: findings };
+}
+
+/* ------------------------- duplicate diagnosis ---------------------- */
+
+/**
+ * Read-only diagnosis of duplicate managed events. Writes nothing.
+ *
+ * cleanupStrays_ reports how many duplicates exist. This reports *why*: for
+ * the worst shape-groups it prints every member's tag value, so a group whose
+ * members carry different values proves sourceKey_ drifted between runs, and
+ * shows which of its three components (source name, event id, start time)
+ * changed. It also prints the source keys the engine computes right now for
+ * events near that shape, to compare against what is stored.
+ */
+function diagnoseDuplicates() {
+  const MAX_GROUPS = 4;      // worst N groups per rule
+  const MAX_MEMBERS = 12;    // members logged per group
+
+  for (const raw of getSyncRules()) {
+    const rule = normalizeRule_(raw);
+    const tagKey = TAG_PREFIX + rule.name;
+    const target = resolveCalendar_(rule.target);
+    if (!target) { log_(rule.name, 'WARN', `target not found: ${rule.target}`); continue; }
+
+    const scanStart = new Date();
+    scanStart.setDate(scanStart.getDate() - 90);
+    const scanEnd = new Date();
+    scanEnd.setDate(scanEnd.getDate() + rule.windowDays + 30);
+
+    const groups = new Map();
+    for (const ev of target.getEvents(scanStart, scanEnd)) {
+      const tagValue = safeGetTag_(ev, tagKey);
+      if (!tagValue && !isManagedBySelf_(ev)) continue; // not ours at all
+      const shape = [tryTitle_(ev), ev.getStartTime().toISOString(), ev.getEndTime().toISOString()].join('|');
+      if (!groups.has(shape)) groups.set(shape, []);
+      groups.get(shape).push({ tagValue: tagValue, event: ev });
+    }
+
+    const worst = Array.from(groups.entries())
+      .filter((entry) => entry[1].length > 1)
+      .sort((a, b) => b[1].length - a[1].length)
+      .slice(0, MAX_GROUPS);
+
+    log_(rule.name, 'INFO',
+      `DIAGNOSE target=${rule.target} shapes=${groups.size} duplicated=${worst.length}`);
+
+    for (const [shape, members] of worst) {
+      const distinct = new Set(members.map((m) => m.tagValue || '<untagged>'));
+      log_(rule.name, 'INFO', `SHAPE ${JSON.stringify({
+        shape: shape,
+        members: members.length,
+        distinctTagValues: distinct.size,
+        untagged: members.filter((m) => !m.tagValue).length,
+      })}`);
+      members.slice(0, MAX_MEMBERS).forEach((m, i) => {
+        log_(rule.name, 'INFO', `  MEMBER ${i} tag=${m.tagValue || '<untagged>'}`);
+      });
+
+      // What would the engine key this shape as today?
+      const shapeStart = new Date(shape.split('|')[1]);
+      const nearFrom = new Date(shapeStart.getTime() - 26 * 60 * 60 * 1000);
+      const nearTo = new Date(shapeStart.getTime() + 26 * 60 * 60 * 1000);
+      for (const srcId of rule.sources) {
+        const cal = resolveCalendar_(srcId);
+        if (!cal) continue;
+        for (const ev of cal.getEvents(nearFrom, nearTo)) {
+          log_(rule.name, 'INFO',
+            `  LIVEKEY ${sourceKey_({ srcId: srcId, event: ev })} title="${tryTitle_(ev)}"`);
+        }
+      }
+    }
+  }
+  return 'see execution log';
 }
