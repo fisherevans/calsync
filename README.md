@@ -14,6 +14,11 @@ share one engine and differ only by config. You declare what you want as rules; 
 engine makes the target match, creating/updating/deleting as needed. It's idempotent,
 so it's safe to run repeatedly.
 
+It's also self-correcting inside the sync window: if a target ends up with two copies
+of the same source event, the next run keeps one and deletes the rest, so duplicates
+converge on their own without you doing anything. Copies it can't recognize as its
+own, and anything sitting outside the window, need the cleanup sweep below.
+
 ## Quick start
 
 **Prerequisites:** Node 20+, and a Google account with the Apps Script API turned on
@@ -57,6 +62,30 @@ the open file, so open `Engine.gs` first):
 
 That's it. Edit `src/Config.js`, `npx clasp push`, re-run `dryRunAll` to confirm, and
 your repo is the source of truth.
+
+## Cleanup and diagnosis
+
+Three more functions live in `Engine.gs` and run the same way - open the file, pick
+the function, hit **Run**. You won't need them on a fresh setup; they're for when a
+target calendar has picked up duplicates the sync window can no longer reach.
+
+1. **`dryRunCleanupStrays`** - reports the duplicate copies on your target calendars
+   and writes nothing. It scans 90 days back as well as forward, so it covers the
+   events a forward-only sync never revisits. It reports two kinds: extra copies
+   carrying the same calsync tag (exact - same tag value means the same source
+   event), and untagged copies sitting at the same title, start and end as an event
+   calsync owns (inferred - a group with no tagged sibling is left alone, because
+   there's no evidence it came from here).
+2. **`cleanupStrays`** - deletes exactly what the dry run listed. Read that report
+   first; this is the only function here that removes events.
+3. **`diagnoseDuplicates`** - read-only, writes nothing. For the worst duplicate
+   groups it prints every member's stored tag value alongside the source key the
+   engine computes now, which is how you tell copies of one event from an identity
+   that drifted between runs.
+
+All three work rule by rule over your rules' target calendars, scanning from 90 days
+back to 30 days past the end of each rule's window, and report into the execution log
+alongside the `SUMMARY` line `dryRunAll` writes.
 
 ## More
 
